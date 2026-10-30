@@ -7,7 +7,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const CLIENT_ID = urlParams.get('client_id');
         const APP_ID = urlParams.get('app_id');
-        const SCHEME = urlParams.get('scheme'); // e.g. com.googleusercontent.apps.YOUR_CLIENT_ID
+        const SCHEME = urlParams.get('scheme');
 
         let tokenClient;
         let accessToken = null;
@@ -15,7 +15,7 @@
         let gisInited = false;
 
         function gapiLoaded() {
-            gapi.load('picker', { callback: () => { pickerInited = true; maybeStart(); } });
+            gapi.load('picker', { callback: () => { pickerInited = true; } });
         }
 
         function gisLoaded() {
@@ -25,23 +25,24 @@
                 callback: (tokenResponse) => {
                     if (tokenResponse && tokenResponse.access_token) {
                         accessToken = tokenResponse.access_token;
-                        maybeStart();
+                        createPicker();
                     }
                 },
             });
             gisInited = true;
-            maybeStart();
         }
 
-        function maybeStart() {
-            if (pickerInited && gisInited && !accessToken) {
+        // Triggered explicitly by user click to comply with browser pop-up policies
+        function handleAuthClick() {
+            if (tokenClient) {
                 tokenClient.requestAccessToken({ prompt: 'consent' });
-            } else if (pickerInited && gisInited && accessToken) {
-                createPicker();
             }
         }
 
         function createPicker() {
+            document.getElementById('loaderText').style.display = 'none';
+            document.getElementById('authButton').style.display = 'none';
+
             let view = new google.picker.View(google.picker.ViewId.DOCS);
             view.setMimeTypes('audio/mpeg,audio/mp4,audio/wav,audio/aac,audio/x-m4a');
 
@@ -61,7 +62,6 @@
                 let fileId = doc[google.picker.Document.ID];
                 let fileName = encodeURIComponent(doc[google.picker.Document.NAME]);
                 
-                // Redirect back to your iOS app custom URL scheme
                 window.location.href = `${SCHEME}://picker-callback?fileId=${fileId}&fileName=${fileName}`;
             } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
                 window.location.href = `${SCHEME}://picker-callback?cancelled=true`;
@@ -71,7 +71,11 @@
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </head>
-<body style="background-color: #121212; color: white; text-align: center; padding-top: 100px; font-family: -apple-system, sans-serif;">
-    <h3>Opening Google Picker...</h3>
+<body style="background-color: #121212; color: white; text-align: center; padding-top: 120px; font-family: -apple-system, sans-serif;">
+    <h3 id="loaderText">Connect Google Drive</h3>
+    <br>
+    <button id="authButton" onclick="handleAuthClick()" style="background-color: #4285F4; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer;">
+        Sign In & Select Audio
+    </button>
 </body>
 </html>
