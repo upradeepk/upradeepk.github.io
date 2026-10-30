@@ -39,15 +39,37 @@
             }
         }
 
+        // function createPicker() {
+        //     document.getElementById('loaderText').style.display = 'none';
+        //     document.getElementById('authButton').style.display = 'none';
+
+        //     let view = new google.picker.View(google.picker.ViewId.DOCS);
+        //     view.setMimeTypes('audio/mpeg,audio/mp4,audio/wav,audio/aac,audio/x-m4a');
+
+        //     let picker = new google.picker.PickerBuilder()
+        //         .enableFeature(google.picker.Feature.NAV_HIDDEN)
+        //         .setAppId(APP_ID)
+        //         .setOAuthToken(accessToken)
+        //         .addView(view)
+        //         .setCallback(pickerCallback)
+        //         .build();
+        //     picker.setVisible(true);
+        // }
+
         function createPicker() {
             document.getElementById('loaderText').style.display = 'none';
             document.getElementById('authButton').style.display = 'none';
-
-            let view = new google.picker.View(google.picker.ViewId.DOCS);
+        
+            let view = new google.picker.DocsView(google.picker.ViewId.DOCS);
             view.setMimeTypes('audio/mpeg,audio/mp4,audio/wav,audio/aac,audio/x-m4a');
-
+            
+            // THIS ENABLES FOLDER VIEW & NAVIGATION
+            view.setIncludeFolders(true);
+        
             let picker = new google.picker.PickerBuilder()
                 .enableFeature(google.picker.Feature.NAV_HIDDEN)
+                // Enable selecting multiple items if desired
+                .enableFeature(google.picker.Feature.MULTISELECT_ENABLED) 
                 .setAppId(APP_ID)
                 .setOAuthToken(accessToken)
                 .addView(view)
