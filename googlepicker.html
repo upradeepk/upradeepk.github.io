@@ -3,8 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Google Drive Picker</title>
-    <style>
+<style>
         /* Ensure the picker dialog scales cleanly inside mobile viewports */
         .picker-dialog {
             max-width: 100% !important;
@@ -14,6 +13,7 @@
             transform: none !important;
         }
     </style>
+    <title>Google Drive Picker</title>
     <script type="text/javascript">
         const urlParams = new URLSearchParams(window.location.search);
         const CLIENT_ID = urlParams.get('client_id');
@@ -21,12 +21,12 @@
         const SCHEME = urlParams.get('scheme');
 
         let tokenClient;
-        let accessToken = null;
         let pickerInited = false;
         let gisInited = false;
+        let accessToken = localStorage.getItem('gdrive_access_token');
 
         function gapiLoaded() {
-            gapi.load('picker', { callback: () => { pickerInited = true; } });
+            gapi.load('picker', { callback: () => { pickerInited = true; checkAndStart(); } });
         }
 
         function gisLoaded() {
@@ -36,51 +36,46 @@
                 callback: (tokenResponse) => {
                     if (tokenResponse && tokenResponse.access_token) {
                         accessToken = tokenResponse.access_token;
+                        // Save token for future automatic loads
+                        localStorage.setItem('gdrive_access_token', accessToken);
                         createPicker();
                     }
                 },
             });
             gisInited = true;
+            checkAndStart();
         }
 
-        // Triggered explicitly by user click to comply with browser pop-up policies
+        function checkAndStart() {
+            // Once both Google libraries are ready, check if we have a saved token
+            if (pickerInited && gisInited) {
+                if (accessToken) {
+                    // Token exists: skip button and open picker directly
+                    createPicker();
+                } else {
+                    // No token: show the sign-in button
+                    document.getElementById('loaderText').style.display = 'none';
+                    document.getElementById('authButton').style.display = 'block';
+                }
+            }
+        }
+
         function handleAuthClick() {
             if (tokenClient) {
                 tokenClient.requestAccessToken({ prompt: 'consent' });
             }
         }
 
-        // function createPicker() {
-        //     document.getElementById('loaderText').style.display = 'none';
-        //     document.getElementById('authButton').style.display = 'none';
-
-        //     let view = new google.picker.View(google.picker.ViewId.DOCS);
-        //     view.setMimeTypes('audio/mpeg,audio/mp4,audio/wav,audio/aac,audio/x-m4a');
-
-        //     let picker = new google.picker.PickerBuilder()
-        //         .enableFeature(google.picker.Feature.NAV_HIDDEN)
-        //         .setAppId(APP_ID)
-        //         .setOAuthToken(accessToken)
-        //         .addView(view)
-        //         .setCallback(pickerCallback)
-        //         .build();
-        //     picker.setVisible(true);
-        // }
-
         function createPicker() {
             document.getElementById('loaderText').style.display = 'none';
             document.getElementById('authButton').style.display = 'none';
-        
+
             let view = new google.picker.DocsView(google.picker.ViewId.DOCS);
             view.setMimeTypes('audio/mpeg,audio/mp4,audio/wav,audio/aac,audio/x-m4a');
-            
-            // THIS ENABLES FOLDER VIEW & NAVIGATION
             view.setIncludeFolders(true);
-        
+
             let picker = new google.picker.PickerBuilder()
                 .enableFeature(google.picker.Feature.NAV_HIDDEN)
-                // Enable selecting multiple items if desired
-                .enableFeature(google.picker.Feature.MULTISELECT_ENABLED) 
                 .setAppId(APP_ID)
                 .setOAuthToken(accessToken)
                 .addView(view)
@@ -94,22 +89,23 @@
                 let doc = data[google.picker.Response.DOCUMENTS][0];
                 let fileId = doc[google.picker.Document.ID];
                 let fileName = encodeURIComponent(doc[google.picker.Document.NAME]);
-        
-                // ADD '&accessToken=' + accessToken here:
+                
                 window.location.href = `${SCHEME}://picker-callback?fileId=${fileId}&fileName=${fileName}&accessToken=${accessToken}`;
             } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
+                // If token expired/invalidated, clear storage so user can re-authenticate next time
+                if (data[google.picker.Response.REASON] === 'INVALID_TOKEN') {
+                    localStorage.removeItem('gdrive_access_token');
+                }
                 window.location.href = `${SCHEME}://picker-callback?cancelled=true`;
             }
         }
-        
     </script>
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </head>
 <body style="background-color: #121212; color: white; text-align: center; padding-top: 120px; font-family: -apple-system, sans-serif;">
-    <h3 id="loaderText">Connect Google Drive</h3>
-    <br>
-    <button id="authButton" onclick="handleAuthClick()" style="background-color: #4285F4; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer;">
+    <h3 id="loaderText">Loading Google Drive...</h3>
+    <button id="authButton" onclick="handleAuthClick()" style="display: none; background-color: #4285F4; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; margin: 0 auto;">
         Sign In & Select Audio
     </button>
 </body>
