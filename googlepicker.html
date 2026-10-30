@@ -73,7 +73,9 @@
             let view = new google.picker.DocsView(google.picker.ViewId.DOCS);
             view.setMimeTypes('audio/mpeg,audio/mp4,audio/wav,audio/aac,audio/x-m4a');
             view.setIncludeFolders(true);
-
+            // FORCE LIST MODE INSTEAD OF GRID
+            view.setMode(google.picker.DocsViewMode.LIST);
+            
             let picker = new google.picker.PickerBuilder()
                 .enableFeature(google.picker.Feature.NAV_HIDDEN)
                 .setAppId(APP_ID)
