@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <style>
         /* Ensure the picker dialog scales cleanly inside mobile viewports */
@@ -13,85 +12,46 @@
             transform: none !important;
         }
     </style>
+    <meta charset="utf-8">
     <title>Google Drive Picker</title>
     <script type="text/javascript">
         const urlParams = new URLSearchParams(window.location.search);
         const CLIENT_ID = urlParams.get('client_id');
         const APP_ID = urlParams.get('app_id');
         const SCHEME = urlParams.get('scheme');
-        let accessToken = urlParams.get('access_token');
-
+        
         let tokenClient;
         let pickerInited = false;
-        let gisReady = false;
-        let gsiScriptLoaded = false;
+        let gisInited = false;
 
         function gapiLoaded() {
-            gapi.load('picker', {
-                callback: () => {
-                    pickerInited = true;
-                    checkAndStart();
-                }
-            });
+            gapi.load('picker', { callback: () => { pickerInited = true; maybeStart(); } });
         }
 
-        function loadGoogleIdentity() {
-            if (gsiScriptLoaded) {
-                if (gisReady) {
-                    handleAuthClick();
-                }
-                return;
-            }
-
-            gsiScriptLoaded = true;
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.async = true;
-            script.onload = () => {
-                gisReady = true;
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: 'https://www.googleapis.com/auth/drive.file',
-                    callback: (tokenResponse) => {
-                        if (tokenResponse && tokenResponse.access_token) {
-                            accessToken = tokenResponse.access_token;
-                            createPicker();
-                        }
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/drive.file',
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        createPicker(tokenResponse.access_token);
                     }
-                });
-                handleAuthClick();
-            };
-            document.head.appendChild(script);
+                },
+            });
+            gisInited = true;
+            maybeStart();
         }
 
-        function checkAndStart() {
-            if (!pickerInited) return;
-
-            if (accessToken) {
-                createPicker();
-            } else {
-                document.getElementById('loaderText').style.display = 'none';
-                document.getElementById('authButton').style.display = 'block';
+        function maybeStart() {
+            // Once loaded, automatically request token. Because ASWebAuthenticationSession 
+            // maintains cookies, subsequent calls will succeed without a disruptive login screen.
+            if (pickerInited && gisInited) {
+                tokenClient.requestAccessToken({ prompt: '' }); // Empty prompt attempts silent token refresh
             }
         }
 
-        function handleAuthClick() {
-            if (accessToken) {
-                createPicker();
-                return;
-            }
-
-            if (!tokenClient) {
-                loadGoogleIdentity();
-                return;
-            }
-
-            tokenClient.requestAccessToken({ prompt: 'consent' });
-        }
-
-        function createPicker() {
+        function createPicker(accessToken) {
             document.getElementById('loaderText').style.display = 'none';
-            document.getElementById('authButton').style.display = 'none';
 
             let view = new google.picker.DocsView(google.picker.ViewId.DOCS);
             view.setMimeTypes('audio/mpeg,audio/mp4,audio/wav,audio/aac,audio/x-m4a');
@@ -103,30 +63,28 @@
                 .setAppId(APP_ID)
                 .setOAuthToken(accessToken)
                 .addView(view)
-                .setCallback(pickerCallback)
+                .setCallback((data) => pickerCallback(data, accessToken))
                 .build();
             picker.setVisible(true);
         }
 
-        function pickerCallback(data) {
+        function pickerCallback(data, accessToken) {
             if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-                const doc = data[google.picker.Response.DOCUMENTS][0];
-                const fileId = encodeURIComponent(doc[google.picker.Document.ID]);
-                const fileName = encodeURIComponent(doc[google.picker.Document.NAME]);
-
-                window.location.href =
-                    `${SCHEME}://picker-callback?fileId=${fileId}&fileName=${fileName}&accessToken=${encodeURIComponent(accessToken)}`;
+                let doc = data[google.picker.Response.DOCUMENTS][0];
+                let fileId = doc[google.picker.Document.ID];
+                let fileName = encodeURIComponent(doc[google.picker.Document.NAME]);
+                
+                // Return both the fileID and the fresh token generated inside the web session back to iOS
+                window.location.href = `${SCHEME}://picker-callback?fileId=${fileId}&fileName=${fileName}&accessToken=${accessToken}`;
             } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
                 window.location.href = `${SCHEME}://picker-callback?cancelled=true`;
             }
         }
     </script>
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </head>
 <body style="background-color: #121212; color: white; text-align: center; padding-top: 120px; font-family: -apple-system, sans-serif;">
-    <h3 id="loaderText">Loading Google Drive...</h3>
-    <button id="authButton" onclick="handleAuthClick()" style="display: none; background-color: #4285F4; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer;">
-        Sign In & Select Audio
-    </button>
+    <h3 id="loaderText">Opening Google Drive Picker...</h3>
 </body>
 </html>
