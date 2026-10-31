@@ -19,12 +19,12 @@
         const CLIENT_ID = urlParams.get('client_id');
         const APP_ID = urlParams.get('app_id');
         const SCHEME = urlParams.get('scheme');
-        const accessToken = urlParams.get('access_token'); // Read token passed from Swift app
+        let accessToken = urlParams.get('access_token'); // Read token passed from Swift app
 
         let tokenClient;
         let pickerInited = false;
         let gisInited = false;
-        // let accessToken = localStorage.getItem('gdrive_access_token');
+        accessToken = accessToken ||= localStorage.getItem('gdrive_access_token');
         
         function gapiLoaded() {
             gapi.load('picker', { callback: () => { pickerInited = true; checkAndStart(); } });
