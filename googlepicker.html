@@ -23,7 +23,8 @@
 
         let tokenClient;
         let pickerInited = false;
-        let gisInited = false;
+        let gisReady = false;
+        let gsiScriptLoaded = false;
 
         function gapiLoaded() {
             gapi.load('picker', {
@@ -34,36 +35,58 @@
             });
         }
 
-        function gisLoaded() {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/drive.file',
-                callback: (tokenResponse) => {
-                    if (tokenResponse && tokenResponse.access_token) {
-                        accessToken = tokenResponse.access_token;
-                        createPicker();
+        function loadGoogleIdentity() {
+            if (gsiScriptLoaded) {
+                if (gisReady) {
+                    handleAuthClick();
+                }
+                return;
+            }
+
+            gsiScriptLoaded = true;
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client';
+            script.async = true;
+            script.onload = () => {
+                gisReady = true;
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: 'https://www.googleapis.com/auth/drive.file',
+                    callback: (tokenResponse) => {
+                        if (tokenResponse && tokenResponse.access_token) {
+                            accessToken = tokenResponse.access_token;
+                            createPicker();
+                        }
                     }
-                },
-            });
-            gisInited = true;
-            checkAndStart();
+                });
+                handleAuthClick();
+            };
+            document.head.appendChild(script);
         }
 
         function checkAndStart() {
-            if (pickerInited && gisInited) {
-                if (accessToken) {
-                    createPicker();
-                } else {
-                    document.getElementById('loaderText').style.display = 'none';
-                    document.getElementById('authButton').style.display = 'block';
-                }
+            if (!pickerInited) return;
+
+            if (accessToken) {
+                createPicker();
+            } else {
+                document.getElementById('loaderText').style.display = 'none';
+                document.getElementById('authButton').style.display = 'block';
             }
         }
 
         function handleAuthClick() {
-            if (tokenClient) {
-                tokenClient.requestAccessToken({ prompt: 'consent' });
+            if (accessToken) {
+                createPicker();
+                return;
             }
+
+            if (!tokenClient) {
+                loadGoogleIdentity();
+                return;
+            }
+
+            tokenClient.requestAccessToken({ prompt: 'consent' });
         }
 
         function createPicker() {
@@ -94,15 +117,11 @@
                 window.location.href =
                     `${SCHEME}://picker-callback?fileId=${fileId}&fileName=${fileName}&accessToken=${encodeURIComponent(accessToken)}`;
             } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
-                if (data[google.picker.Response.REASON] === 'INVALID_TOKEN') {
-                    // token expired; next attempt will re-authenticate
-                }
                 window.location.href = `${SCHEME}://picker-callback?cancelled=true`;
             }
         }
     </script>
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </head>
 <body style="background-color: #121212; color: white; text-align: center; padding-top: 120px; font-family: -apple-system, sans-serif;">
     <h3 id="loaderText">Loading Google Drive...</h3>
