@@ -19,7 +19,7 @@
         const CLIENT_ID = urlParams.get('client_id');
         const APP_ID = urlParams.get('app_id');
         const SCHEME = urlParams.get('scheme');
-        let accessToken = urlParams.get('access_token') ||= localStorage.getItem('gdrive_access_token');; // Read token passed from Swift app
+        let accessToken = urlParams.get('access_token') || localStorage.getItem('gdrive_access_token');; // Read token passed from Swift app
 
         let tokenClient;
         let pickerInited = false;
@@ -86,21 +86,38 @@
             picker.setVisible(true);
         }
 
+        // function pickerCallback(data) {
+        //     if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
+        //         let doc = data[google.picker.Response.DOCUMENTS][0];
+        //         let fileId = doc[google.picker.Document.ID];
+        //         let fileName = encodeURIComponent(doc[google.picker.Document.NAME]);
+                
+        //         window.location.href = `${SCHEME}://picker-callback?fileId=${fileId}&fileName=${fileName}&accessToken=${accessToken}`;
+        //     } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
+        //         // If token expired/invalidated, clear storage so user can re-authenticate next time
+        //         if (data[google.picker.Response.REASON] === 'INVALID_TOKEN') {
+        //             localStorage.removeItem('gdrive_access_token');
+        //         }
+        //         window.location.href = `${SCHEME}://picker-callback?cancelled=true`;
+        //     }
+        // }
         function pickerCallback(data) {
             if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-                let doc = data[google.picker.Response.DOCUMENTS][0];
-                let fileId = doc[google.picker.Document.ID];
-                let fileName = encodeURIComponent(doc[google.picker.Document.NAME]);
+                const doc = data[google.picker.Response.DOCUMENTS][0];
+                const fileId = encodeURIComponent(doc[google.picker.Document.ID]);
+                const fileName = encodeURIComponent(doc[google.picker.Document.NAME]);
                 
-                window.location.href = `${SCHEME}://picker-callback?fileId=${fileId}&fileName=${fileName}&accessToken=${accessToken}`;
-            } else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
-                // If token expired/invalidated, clear storage so user can re-authenticate next time
+                window.location.href =
+                `${SCHEME}://picker-callback?fileId=${fileId}&fileName=${fileName}&accessToken=${encodeURIComponent(accessToken)}`;
+            } 
+            else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
                 if (data[google.picker.Response.REASON] === 'INVALID_TOKEN') {
                     localStorage.removeItem('gdrive_access_token');
                 }
                 window.location.href = `${SCHEME}://picker-callback?cancelled=true`;
             }
         }
+        
     </script>
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
