@@ -19,7 +19,7 @@
         const CLIENT_ID = urlParams.get('client_id');
         const APP_ID = urlParams.get('app_id');
         const SCHEME = urlParams.get('scheme');
-        let accessToken = urlParams.get('access_token') || localStorage.getItem('gdrive_access_token');; // Read token passed from Swift app
+        let accessToken = urlParams.get('access_token'); // Read token passed from Swift app
 
         let tokenClient;
         let pickerInited = false;
@@ -36,8 +36,6 @@
                 callback: (tokenResponse) => {
                     if (tokenResponse && tokenResponse.access_token) {
                         accessToken = tokenResponse.access_token;
-                        // Save token for future automatic loads
-                        localStorage.setItem('gdrive_access_token', accessToken);
                         createPicker();
                     }
                 },
@@ -112,7 +110,7 @@
             } 
             else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
                 if (data[google.picker.Response.REASON] === 'INVALID_TOKEN') {
-                    localStorage.removeItem('gdrive_access_token');
+                    // localStorage.removeItem('gdrive_access_token');
                 }
                 window.location.href = `${SCHEME}://picker-callback?cancelled=true`;
             }
