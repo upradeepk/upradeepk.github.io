@@ -66,6 +66,7 @@
 
             let picker = new google.picker.PickerBuilder()
                 .enableFeature(google.picker.Feature.NAV_HIDDEN)
+                .enableFeature(google.picker.Feature.MULTISELECT_ENABLED):
                 .setAppId(APP_ID)
                 .setOAuthToken(accessToken)
                 .addView(view)
