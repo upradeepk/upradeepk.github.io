@@ -51,7 +51,8 @@
 
         // Triggered by explicit user click to satisfy Google's popup policy
         function handleOpenPicker() {
-            tokenClient.requestAccessToken({ prompt: 'select_account' });
+            //tokenClient.requestAccessToken({ prompt: 'select_account' }); //this asks to select user for every subsequent session
+            tokenClient.requestAccessToken({ prompt: '' }); //trying to avoid selectig user account for every subsequent session
         }
 
         function createPicker(accessToken) {
