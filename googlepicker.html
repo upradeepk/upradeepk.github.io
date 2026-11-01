@@ -50,19 +50,19 @@
         }
 
         // Fallback check in case scripts loaded from cache and onload missed firing
-        // window.addEventListener('load', () => {
-        //     if (typeof gapi !== 'undefined' && gapi.load && !pickerInited) {
-        //         gapi.load('picker', { callback: () => { pickerInited = true; checkReady(); } });
-        //     }
-        //     if (typeof google !== 'undefined' && google.accounts && !gisInited) {
-        //         gisLoaded();
-        //     }
-        // });
+        window.addEventListener('load', () => {
+            if (typeof gapi !== 'undefined' && gapi.load && !pickerInited) {
+                gapi.load('picker', { callback: () => { pickerInited = true; checkReady(); } });
+            }
+            if (typeof google !== 'undefined' && google.accounts && !gisInited) {
+                gisLoaded();
+            }
+        });
         
         // Triggered by explicit user click to satisfy Google's popup policy
         function handleOpenPicker() {
-            tokenClient.requestAccessToken({ prompt: 'select_account' }); //this asks to select user for every subsequent session
-            // tokenClient.requestAccessToken({ prompt: '' }); //trying to avoid selectig user account for every subsequent session
+            // tokenClient.requestAccessToken({ prompt: 'select_account' }); //this asks to select user for every subsequent session
+            tokenClient.requestAccessToken({ prompt: '' }); //trying to avoid selectig user account for every subsequent session
         }
 
         function createPicker(accessToken) {
@@ -77,7 +77,7 @@
 
             let picker = new google.picker.PickerBuilder()
                 .enableFeature(google.picker.Feature.NAV_HIDDEN)
-                .enableFeature(google.picker.Feature.MULTISELECT_ENABLED):
+                .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
                 .setAppId(APP_ID)
                 .setOAuthToken(accessToken)
                 .addView(view)
